@@ -275,7 +275,7 @@ MonoBehaviour:
   height: 65
   seed: 
   useRandomSeed: 1
-  randomFillPercent: 44
+  randomFillPercent: 54
 --- !u!4 &1004769873
 Transform:
   m_ObjectHideFlags: 0
