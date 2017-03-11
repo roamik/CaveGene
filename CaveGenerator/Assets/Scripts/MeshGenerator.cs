@@ -1,11 +1,17 @@
-﻿using System.Collections;
+﻿using System;
+using System.Collections;
 using System.Collections.Generic;
+using UnityEditor;
 using UnityEngine;
 
 public class MeshGenerator : MonoBehaviour {
 
     public SquareGrid squareGrid;
     public MeshFilter walls;
+    public MeshFilter cave;
+
+    public bool is2D;
+
     List<Vector3> vertices;
     List<int> triangles;
 
@@ -33,24 +39,53 @@ public class MeshGenerator : MonoBehaviour {
         }
 
         Mesh mesh = new Mesh();
-        GetComponent<MeshFilter>().mesh = mesh;
+        cave.mesh = mesh;
 
         mesh.vertices = vertices.ToArray();
         mesh.triangles = triangles.ToArray();
         mesh.RecalculateNormals();
 
-        CreateWallMesh();
+        int tileAmount = 10;
+        Vector2[] uvs = new Vector2[vertices.Count];
+        for (int i = 0; i < vertices.Count; i++)
+        {
+            float percentX = Mathf.InverseLerp(-map.GetLength(0)/2 * squareSize, map.GetLength(0) / 2 * squareSize, vertices[i].x) * tileAmount;
+            float percentY = Mathf.InverseLerp(-map.GetLength(0) / 2 * squareSize, map.GetLength(0) / 2 * squareSize, vertices[i].z) * tileAmount;
+            uvs[i] = new Vector2(percentX, percentY);
+        }
+        mesh.uv = uvs;
+        var wall = new Mesh();
+        if(!is2D)
+        {
+            wall = CreateWallMesh();
+        }
+        var newGuid = Guid.NewGuid().ToString();
+
+        AssetDatabase.CreateAsset(wall, string.Format("Assets/1/top{0}.prefab", newGuid));
+        AssetDatabase.CreateAsset(mesh, string.Format("Assets/1/walls{0}.prefab", newGuid));
+
+        AssetDatabase.CreateAsset(cave, string.Format("Assets/1/cave{0}.prefab", newGuid));
+
+
+        var gm = new GameObject();
+        gm.AddComponent<MeshFilter>();
+
+
+        var msf = gm.GetComponent<MeshFilter>();
+        msf = cave;
+        AssetDatabase.CreateAsset(gm, string.Format("Assets/1/top{0}.prefab", newGuid));
+
+        AssetDatabase.SaveAssets();
     }
 
-    void CreateWallMesh()
+    Mesh CreateWallMesh()
     {
-
         CalculateMeshOutlines();
 
         List<Vector3> wallVertices = new List<Vector3>();
         List<int> wallTriangles = new List<int>();
         Mesh wallMesh = new Mesh();
-        float wallHeight = 5;
+        float wallHeight = 10;
 
         foreach (List<int> outline in outlines)
         {
@@ -74,6 +109,23 @@ public class MeshGenerator : MonoBehaviour {
         wallMesh.vertices = wallVertices.ToArray();
         wallMesh.triangles = wallTriangles.ToArray();
         walls.mesh = wallMesh;
+
+        Vector2[] uvs = new Vector2[vertices.Count];
+        for (int i = 0; i < wallMesh.vertices.Length; i++)
+        {
+            
+            float x = wallMesh.vertices[i].x;
+            if (i + 1 < wallMesh.vertices.Length && x == wallMesh.vertices[i + 1].x && i > 1 && wallMesh.vertices[i - 1].x == x)
+            {
+                //Fix bug texture
+                x = wallMesh.vertices[i].z;
+            }
+            uvs[i] = new Vector2(x, wallMesh.vertices[i].y);
+        }
+
+        MeshCollider wallCollider = walls.gameObject.AddComponent<MeshCollider>();
+        wallCollider.sharedMesh = wallMesh;
+        return wallMesh;
     }
 
     void TriangulateSquare(Square square)
