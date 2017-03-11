@@ -40,6 +40,7 @@ public class MeshGenerator : MonoBehaviour {
         mesh.RecalculateNormals();
 
         CreateWallMesh();
+      
     }
 
     void CreateWallMesh()
