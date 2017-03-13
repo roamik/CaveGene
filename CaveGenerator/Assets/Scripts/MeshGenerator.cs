@@ -7,8 +7,8 @@ using UnityEngine;
 public class MeshGenerator : MonoBehaviour {
 
     public SquareGrid squareGrid;
-    public MeshFilter walls;
-    public MeshFilter cave;
+    public MeshFilter walls = new MeshFilter();
+    public MeshFilter cave = new MeshFilter();
 
     public bool is2D;
 
@@ -61,20 +61,23 @@ public class MeshGenerator : MonoBehaviour {
         }
         var newGuid = Guid.NewGuid().ToString();
 
-        AssetDatabase.CreateAsset(wall, string.Format("Assets/1/top{0}.prefab", newGuid));
-        AssetDatabase.CreateAsset(mesh, string.Format("Assets/1/walls{0}.prefab", newGuid));
-
-        AssetDatabase.CreateAsset(cave, string.Format("Assets/1/cave{0}.prefab", newGuid));
-
+        AssetDatabase.CreateAsset(wall, string.Format("Assets/1/wals{0}.prefab", newGuid));
+        AssetDatabase.CreateAsset(mesh, string.Format("Assets/1/cave{0}.prefab", newGuid));
+        AssetDatabase.SaveAssets();
+        AssetDatabase.Refresh();
 
         var gm = new GameObject();
-        gm.AddComponent<MeshFilter>();
+        var gmcave = AssetDatabase.LoadAssetAtPath(string.Format("Assets/1/cave{0}.prefab", newGuid),typeof(Mesh)) as Mesh;
+        var gmwals = AssetDatabase.LoadAssetAtPath(string.Format("Assets/1/wals{0}.prefab", newGuid),typeof(Mesh)) as Mesh;
 
+        cave.transform.parent = gm.transform;
+        walls.transform.parent = gm.transform;
+        cave.mesh = gmcave;
+        walls.mesh = gmwals;
+        //var emptyPrefab = PrefabUtility.CreateEmptyPrefab(string.Format("Assets/1/GO{0}.prefab", newGuid));
+        PrefabUtility.CreatePrefab(string.Format("Assets/1/GO{0}.prefab", newGuid), gm);
 
-        var msf = gm.GetComponent<MeshFilter>();
-        msf = cave;
-        AssetDatabase.CreateAsset(gm, string.Format("Assets/1/top{0}.prefab", newGuid));
-
+        //PrefabUtility.ReplacePrefab(gm, emptyPrefab);
         AssetDatabase.SaveAssets();
     }
 

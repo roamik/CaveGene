@@ -1,7 +1,7 @@
 ﻿using UnityEngine;
-using System.Collections;
 using System.Collections.Generic;
 using System;
+using System.Linq;
 
 public class MapGenerator : MonoBehaviour {
 
@@ -14,11 +14,13 @@ public class MapGenerator : MonoBehaviour {
     [Range (0,100)]
     public int randomFillPercent;
 
+    public List<Vector2> navPoints;
+
     int[,] map;
 
     void Start()
     {
-        GenerateMap();
+        //GenerateMap();
     }
 
     void Update()
@@ -28,6 +30,14 @@ public class MapGenerator : MonoBehaviour {
             GenerateMap();
         }
         
+    }
+    void OnDrawGizmosSelected()
+    {
+        Gizmos.color = Color.green;
+        foreach (var v in navPoints)
+        {
+            Gizmos.DrawSphere(new Vector3(v.x, 10, v.y), 2);
+        }
     }
 
     void GenerateMap()
@@ -62,6 +72,7 @@ public class MapGenerator : MonoBehaviour {
 
         MeshGenerator meshGen = GetComponent<MeshGenerator>();
         meshGen.GenerateMesh(borderedMap, 1);
+
     }
 
     void ProcessMap()
@@ -83,7 +94,7 @@ public class MapGenerator : MonoBehaviour {
 
         List<List<Coord>> roomRegions = GetRegions(0);
 
-        int roomTresholdSize = 50;
+        int roomTresholdSize = 35;
         List<Room> notFilteredRooms = new List<Room>(); // notFilteredRooms = rooms wich 'survived' due filtering
 
         foreach (List<Coord> roomRegion in roomRegions)
@@ -100,10 +111,12 @@ public class MapGenerator : MonoBehaviour {
                 notFilteredRooms.Add(new Room(roomRegion, map));
             }
         }
+
         notFilteredRooms.Sort();
         notFilteredRooms[0].isMainRoom = true;
         notFilteredRooms[0].isAccessibleFromMainRoom = true;
         ConnectClosestRooms(notFilteredRooms);
+        navPoints.AddRange(notFilteredRooms.Select(c => c.centerTile).ToList().ToVector());
     }
 
     void ConnectClosestRooms (List<Room> allRooms, bool forceAccessibilityFromMainRoom = false)
@@ -199,11 +212,10 @@ public class MapGenerator : MonoBehaviour {
     void CreatePassage (Room roomA, Room roomB, Coord tileA, Coord tileB)
     {
         Room.ConnectRooms(roomA, roomB);
-
         List<Coord> line = GetLine(tileA, tileB);
-        
         foreach (Coord c in line)
         {
+            
             DrawCircle(c, 2); // the weight of passage way (corridor)
         }
     }
@@ -418,7 +430,7 @@ public class MapGenerator : MonoBehaviour {
         return wallCount;
     }
 
-    struct Coord
+    public struct Coord
     {
         public int tileX;
         public int tileY;
@@ -428,13 +440,20 @@ public class MapGenerator : MonoBehaviour {
             tileX = x;
             tileY = y;
         }
-    }
+        public Vector2 ToVector()
+        {
+            return new Vector2(tileX, tileY);
+        }
+        
 
+    }
+    
     class Room : IComparable <Room>
     {
         public List<Coord> tiles;
         public List<Coord> edgeTiles;
         public List<Room> connectedRooms;
+        public Coord centerTile;
         public int roomSize;
         public bool isAccessibleFromMainRoom;
         public bool isMainRoom;
@@ -450,7 +469,8 @@ public class MapGenerator : MonoBehaviour {
             connectedRooms = new List<Room>();
 
             edgeTiles = new List<Coord>();
-
+            int totalX = 0, totalY = 0;
+            
             foreach (Coord tile in tiles)
             {
                 for(int x = tile.tileX-1; x <= tile.tileX+1; x++)
@@ -462,12 +482,23 @@ public class MapGenerator : MonoBehaviour {
                             if(map[x,y] == 1)
                             {
                                 edgeTiles.Add(tile);
+                                continue;
                             }
                         }
                     }
-                }
+                } 
+                totalX += tile.tileX;
+                totalY += tile.tileY;                
             }
+            var innertiles = tiles.Except(edgeTiles).ToList();
+            int centerX = totalX / tiles.Count;
+            int centerY = totalY / tiles.Count;
+           
+
+            var v = new Vector2(centerX, centerY).GetClosestPoint(innertiles.ToVector());
+            centerTile = new Coord((int)v.x,(int)v.y);
         }
+
 
         public void SetAccessibleFromMainRoom()
         {
@@ -505,5 +536,22 @@ public class MapGenerator : MonoBehaviour {
         {
             return otherRoom.roomSize.CompareTo(roomSize);
         }
+    }
+}
+public static class LinqHelper
+{
+    public static List<Vector2> ToVector(this List<MapGenerator.Coord> coords)
+    {
+        var list = new List<Vector2>();
+        foreach (var c in coords)
+        {
+            list.Add(new Vector2(c.tileX, c.tileY));
+        }
+        return list;
+    }
+    public static Vector2 GetClosestPoint(this Vector2 v1, IEnumerable<Vector2> points)
+    {
+        var sorted = points.OrderBy(v2 => Vector2.Distance(v1,v2));
+        return sorted.First();
     }
 }
