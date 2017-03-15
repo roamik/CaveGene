@@ -1,6 +1,6 @@
 fileFormatVersion: 2
-guid: 78f4f8d3fc9cb1f47a1e53e5bfbfe933
-timeCreated: 1489445744
+guid: 91d87a64106bdd644aa73b22d169d85b
+timeCreated: 1489598725
 licenseType: Free
 ModelImporter:
   serializedVersion: 19
@@ -43,10 +43,10 @@ ModelImporter:
     100070: RightToe_End
     100072: RightToeBase
     100074: RightUpLeg
-    100076: //RootNode
-    100078: Spine
-    100080: Spine1
-    100082: Spine2
+    100076: Spine
+    100078: Spine1
+    100080: Spine2
+    100082: //RootNode
     400000: Head
     400002: HeadTop_End
     400004: Hips
@@ -85,11 +85,11 @@ ModelImporter:
     400070: RightToe_End
     400072: RightToeBase
     400074: RightUpLeg
-    400076: //RootNode
-    400078: Spine
-    400080: Spine1
-    400082: Spine2
-    7400000: run_back
+    400076: Spine
+    400078: Spine1
+    400080: Spine2
+    400082: //RootNode
+    7400000: run
     9500000: //RootNode
   materials:
     importMaterials: 1
@@ -100,7 +100,7 @@ ModelImporter:
     bakeSimulation: 0
     resampleCurves: 1
     optimizeGameObjects: 0
-    motionNodeName: 
+    motionNodeName: <Root Transform>
     animationImportErrors: 
     animationImportWarnings: "\nClip 'mixamo.com' has import animation warnings that
       might lower retargeting quality:\nNote: Activate translation DOF on avatar to
@@ -116,10 +116,10 @@ ModelImporter:
     extraExposedTransformPaths: []
     clipAnimations:
     - serializedVersion: 16
-      name: run_back
+      name: run
       takeName: mixamo.com
       firstFrame: 0
-      lastFrame: 19
+      lastFrame: 22
       wrapMode: 0
       orientationOffsetY: 0
       level: 0
@@ -127,13 +127,13 @@ ModelImporter:
       loop: 0
       hasAdditiveReferencePose: 0
       loopTime: 1
-      loopBlend: 1
-      loopBlendOrientation: 1
-      loopBlendPositionY: 1
+      loopBlend: 0
+      loopBlendOrientation: 0
+      loopBlendPositionY: 0
       loopBlendPositionXZ: 0
-      keepOriginalOrientation: 1
+      keepOriginalOrientation: 0
       keepOriginalPositionY: 1
-      keepOriginalPositionXZ: 1
+      keepOriginalPositionXZ: 0
       heightFromFeet: 0
       mirror: 0
       bodyMask: 01000000010000000100000001000000010000000100000001000000010000000100000001000000010000000100000001000000
