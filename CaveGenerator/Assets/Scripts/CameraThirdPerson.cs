@@ -30,7 +30,7 @@ public class CameraThirdPerson : MonoBehaviour
         if(lockCursor)
         {
             Cursor.lockState = CursorLockMode.Locked;
-            Cursor.visible = false;
+            Cursor.visible = true;
         }
     }
 

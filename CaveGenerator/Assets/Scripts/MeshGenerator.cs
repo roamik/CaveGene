@@ -1,26 +1,42 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEditor;
 using UnityEngine;
 
 public class MeshGenerator : MonoBehaviour {
 
     public SquareGrid squareGrid;
-    public MeshFilter walls = new MeshFilter();
-    public MeshFilter cave = new MeshFilter();
-
     public bool is2D;
-
     List<Vector3> vertices;
     List<int> triangles;
+
+    public Material wallmat;
+    public Material topmat;
 
     Dictionary<int, List<Triangle>> triangleDictionary = new Dictionary<int, List<Triangle>>();
     List<List<int>> outlines = new List<List<int>>();
     HashSet<int> checkedVertices = new HashSet<int>();
 
-    public void GenerateMesh (int[,] map, float squareSize )
+    public IEnumerator<GameObject> GenerateMesh (int[,] map, float squareSize, int indexX, int indexY)
     {
+        var chankGO = new GameObject(indexX.ToString() + indexY.ToString());
+        var topGO = new GameObject("top" + indexX.ToString()+ indexY.ToString());
+        var wallsGO = new GameObject("walls" + indexX.ToString() + indexY.ToString());
+
+        MeshFilter top = topGO.gameObject.AddComponent<MeshFilter>();
+        MeshFilter walls = wallsGO.gameObject.AddComponent<MeshFilter>();
+
+        MeshRenderer wallsRender = topGO.gameObject.AddComponent<MeshRenderer>();
+        MeshRenderer topRender = wallsGO.gameObject.AddComponent<MeshRenderer>();
+
+        wallsRender.material = wallmat;
+        topRender.material = topmat;
+        topGO.transform.parent = chankGO.transform;
+        wallsGO.transform.parent = chankGO.transform;
+        chankGO.transform.localPosition = new Vector3((map.GetLength(0)-3) * squareSize * indexX, 10, (map.GetLength(1)-3) * squareSize * indexY);
+
         triangleDictionary.Clear();
         outlines.Clear();
         checkedVertices.Clear();
@@ -39,7 +55,7 @@ public class MeshGenerator : MonoBehaviour {
         }
 
         Mesh mesh = new Mesh();
-        cave.mesh = mesh;
+        top.mesh = mesh;
 
         mesh.vertices = vertices.ToArray();
         mesh.triangles = triangles.ToArray();
@@ -54,51 +70,72 @@ public class MeshGenerator : MonoBehaviour {
             uvs[i] = new Vector2(percentX, percentY);
         }
         mesh.uv = uvs;
-        var wall = new Mesh();
+        var wallMesh = new Mesh();
         if(!is2D)
         {
-            wall = CreateWallMesh();
+            wallMesh = CreateWallMesh((map.GetLength(0)));
         }
         var newGuid = Guid.NewGuid().ToString();
 
-        AssetDatabase.CreateAsset(wall, string.Format("Assets/1/wals{0}.prefab", newGuid));
+        walls.mesh = wallMesh;
+        MeshCollider wallCollider = walls.gameObject.AddComponent<MeshCollider>();
+        wallCollider.sharedMesh = wallMesh;
+
+        AssetDatabase.CreateAsset(wallMesh, string.Format("Assets/1/wals{0}.prefab", newGuid));
         AssetDatabase.CreateAsset(mesh, string.Format("Assets/1/cave{0}.prefab", newGuid));
         AssetDatabase.SaveAssets();
         AssetDatabase.Refresh();
 
-        var gm = new GameObject();
-        var gmcave = AssetDatabase.LoadAssetAtPath(string.Format("Assets/1/cave{0}.prefab", newGuid),typeof(Mesh)) as Mesh;
-        var gmwals = AssetDatabase.LoadAssetAtPath(string.Format("Assets/1/wals{0}.prefab", newGuid),typeof(Mesh)) as Mesh;
-
-        cave.transform.parent = gm.transform;
-        walls.transform.parent = gm.transform;
-        cave.mesh = gmcave;
+        var gmcave = AssetDatabase.LoadAssetAtPath(string.Format("Assets/1/cave{0}.prefab", newGuid), typeof(Mesh)) as Mesh;
+        var gmwals = AssetDatabase.LoadAssetAtPath(string.Format("Assets/1/wals{0}.prefab", newGuid), typeof(Mesh)) as Mesh;
+        
+        top.mesh = gmcave;
         walls.mesh = gmwals;
+        AssetDatabase.SaveAssets();
+
         //var emptyPrefab = PrefabUtility.CreateEmptyPrefab(string.Format("Assets/1/GO{0}.prefab", newGuid));
-        PrefabUtility.CreatePrefab(string.Format("Assets/1/GO{0}.prefab", newGuid), gm);
+        yield return chankGO;
 
         //PrefabUtility.ReplacePrefab(gm, emptyPrefab);
-        AssetDatabase.SaveAssets();
-    }
+    } 
 
-    Mesh CreateWallMesh()
+    Mesh CreateWallMesh(int size)
     {
         CalculateMeshOutlines();
-
         List<Vector3> wallVertices = new List<Vector3>();
         List<int> wallTriangles = new List<int>();
         Mesh wallMesh = new Mesh();
         float wallHeight = 10;
+        var veclist = new List<Vector3>()
+                {
+                    new Vector3(size/4, size/4),
+                    new Vector3((size/4)*3 , size/4),
+                    new Vector3(size/4,(size/4)*3),
+                    new Vector3((size/4)*3 , (size/4)*3),
+                };
 
         foreach (List<int> outline in outlines)
         {
             for (int i = 0; i < outline.Count - 1; i++)
             {
                 int startIndex = wallVertices.Count;
-                wallVertices.Add(vertices[outline[i]]); //left vertex (0)
-                wallVertices.Add(vertices[outline[i+1]]); //right vertex (1)
-                wallVertices.Add(vertices[outline[i]] - Vector3.up * wallHeight); //bottom left vertex (2)
-                wallVertices.Add(vertices[outline[i + 1]] - Vector3.up * wallHeight); //bottom right vertex (3)
+                wallVertices.Add(vertices[outline[i]]); //top left vertex (0)
+                wallVertices.Add(vertices[outline[i+1]]); //top right vertex (1)
+
+                //if (vertices[outline[i]].x != 0 && vertices[outline[i]].x != size - 1 && vertices[outline[i]].z != 0 && vertices[outline[i]].z != size - 1)
+                //{
+                    var vector = veclist.OrderBy(c => Vector3.Distance(vertices[outline[i]], c)).First();
+                    wallVertices.Add(Vector3.MoveTowards(vertices[outline[i]], vector, 0f) - Vector3.up * (wallHeight / 2)); //middle left vertex (2)
+                    var vector2 = veclist.OrderBy(c => Vector3.Distance(vertices[outline[i+1]], c)).First();
+                    wallVertices.Add(Vector3.MoveTowards(vertices[outline[i + 1]] , vector2, 0f) - Vector3.up * (wallHeight / 2));
+                //}
+                //else
+                //{
+                //    wallVertices.Add(vertices[outline[i]] - Vector3.up * (wallHeight / 2)); //middle left vertex (2)
+                //    wallVertices.Add(vertices[outline[i + 1]] - Vector3.up * (wallHeight / 2)); //middle right vertex (3)
+                //}
+                wallVertices.Add(vertices[outline[i]] - Vector3.up * wallHeight); //bottom left vertex (4)
+                wallVertices.Add(vertices[outline[i + 1]] - Vector3.up * wallHeight); //bottom right vertex (5)
 
                 wallTriangles.Add(startIndex + 0);
                 wallTriangles.Add(startIndex + 2);
@@ -107,16 +144,40 @@ public class MeshGenerator : MonoBehaviour {
                 wallTriangles.Add(startIndex + 3);
                 wallTriangles.Add(startIndex + 1);
                 wallTriangles.Add(startIndex + 0);
+
+                wallTriangles.Add(startIndex + 2);
+                wallTriangles.Add(startIndex + 4);
+                wallTriangles.Add(startIndex + 5);
+
+                wallTriangles.Add(startIndex + 5);
+                wallTriangles.Add(startIndex + 3);
+                wallTriangles.Add(startIndex + 2);
+
+                //for (int j = 0; j <= florsubs; j = +2)
+                //{
+                //    wallTriangles.Add(startIndex + j + 0);
+                //    wallTriangles.Add(startIndex + j + 2);
+                //    wallTriangles.Add(startIndex + j + 3);
+
+                //    wallTriangles.Add(startIndex + j + 3);
+                //    wallTriangles.Add(startIndex + j + 1);
+                //    wallTriangles.Add(startIndex + j + 0);
+                //}
+
+                //wallTriangles.Add(startIndex + florsubs + 0);
+                //wallTriangles.Add(startIndex + florsubs + 2);
+                //wallTriangles.Add(startIndex + florsubs + 3);
+
+                //wallTriangles.Add(startIndex + florsubs + 3);
+                //wallTriangles.Add(startIndex + florsubs + 1);
+                //wallTriangles.Add(startIndex + florsubs + 0);
             }
         }
+        
         wallMesh.vertices = wallVertices.ToArray();
-        wallMesh.triangles = wallTriangles.ToArray();
-        walls.mesh = wallMesh;
-
-        Vector2[] uvs = new Vector2[vertices.Count];
+        Vector2[] uvs = new Vector2[wallMesh.vertices.Length];
         for (int i = 0; i < wallMesh.vertices.Length; i++)
         {
-            
             float x = wallMesh.vertices[i].x;
             if (i + 1 < wallMesh.vertices.Length && x == wallMesh.vertices[i + 1].x && i > 1 && wallMesh.vertices[i - 1].x == x)
             {
@@ -125,9 +186,11 @@ public class MeshGenerator : MonoBehaviour {
             }
             uvs[i] = new Vector2(x, wallMesh.vertices[i].y);
         }
-
-        MeshCollider wallCollider = walls.gameObject.AddComponent<MeshCollider>();
-        wallCollider.sharedMesh = wallMesh;
+        wallMesh.triangles = wallTriangles.ToArray();
+        wallMesh.RecalculateNormals();
+        
+        wallMesh.uv = uvs;
+        
         return wallMesh;
     }
 
@@ -270,12 +333,12 @@ public class MeshGenerator : MonoBehaviour {
                 if (newOutlineVertex != -1)
                 {
                     checkedVertices.Add(vertexIndex);
-
                     List<int> newOutline = new List<int>();
                     newOutline.Add(vertexIndex);
                     outlines.Add(newOutline);
                     FollowOutline(newOutlineVertex, outlines.Count - 1);
                     outlines[outlines.Count - 1].Add(vertexIndex);
+                   
                 }
             }
         }

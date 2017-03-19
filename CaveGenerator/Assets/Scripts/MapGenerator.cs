@@ -2,12 +2,19 @@
 using System.Collections.Generic;
 using System;
 using System.Linq;
+using UnityEditor;
+using System.Collections;
 
 public class MapGenerator : MonoBehaviour {
 
-    public int width;
-    public int height;
+    public int width = 64;
+    public int height = 64;
 
+    public int chankSizeX = 8;
+    public int chankSizeY = 8;
+
+
+    
     public string seed;
     public bool useRandomSeed;
 
@@ -17,17 +24,23 @@ public class MapGenerator : MonoBehaviour {
     public List<Vector2> navPoints;
 
     int[,] map;
-
+    public List<GameObject> Chanks;
+    
     void Start()
     {
-        //GenerateMap();
+        Chanks = new List<GameObject>();
+       
     }
 
     void Update()
     {
+        if (Input.GetKeyDown(KeyCode.Escape))
+        {
+            Application.Quit();
+        }
         if (Input.GetKeyDown(KeyCode.G))
         {
-            GenerateMap();
+            StartCoroutine(GenerateMap()); ;
         }
         
     }
@@ -40,19 +53,22 @@ public class MapGenerator : MonoBehaviour {
         }
     }
 
-    void GenerateMap()
+
+    IEnumerator GenerateMap()
     {
         map = new int[width, height];
-        RandomFillMap();
-
-        for(int i = 0; i<5; i ++)
+        yield return StartCoroutine(RandomFillMap());
+        Debug.Log("Random map filed");
+        for (int i = 0; i < 5; i++)
         {
-            SmoothMap();
+            yield return StartCoroutine(SmoothMap());
+            Debug.Log("Random map Smoothed "+i+"/5");
         }
 
-        ProcessMap();
+        yield return StartCoroutine(ProcessMap());
+        int borderSize = chankSizeX / 2;
 
-        int borderSize = 5;
+        Debug.Log(string.Format("Start bordering map..."));
         int[,] borderedMap = new int[width + borderSize * 2, height + borderSize * 2];
 
         for (int x = 0; x < borderedMap.GetLength(0); x++)
@@ -69,63 +85,103 @@ public class MapGenerator : MonoBehaviour {
                 }
             }
         }
-
+        Debug.Log(string.Format("End bordering map..."));
+        var newGuid = Guid.NewGuid().ToString();
         MeshGenerator meshGen = GetComponent<MeshGenerator>();
-        meshGen.GenerateMesh(borderedMap, 1);
-
+        var list = borderedMap.ToSquare2D(chankSizeX);
+        int indexX = 0;
+        var mapGO = Instantiate(new GameObject("map" + newGuid),new Vector3(0,10,0),new Quaternion()) as GameObject;
+        foreach (var inserList in list)
+        {
+            int indexY = 0;
+            foreach (var l in inserList)
+            {
+                var cd = new CoroutineWithData(this, meshGen.GenerateMesh(l, 1, indexX, indexY));
+                yield return cd.coroutine;
+                var gm = cd.result as GameObject;
+                gm.transform.parent = mapGO.transform;
+                //Chanks.Add(gm);
+                Debug.Log(string.Format("Plasing meshes... {0}/{1},{2}/{3}", indexX, list.Count(), indexY, inserList.Count()));
+                indexY++;
+            }
+            indexX++;
+        }
+        //PrefabUtility.CreatePrefab(string.Format("Assets/1/GO{0}.prefab", newGuid), mapGO);
+        AssetDatabase.CreateAsset(mapGO, string.Format("Assets/maps/map{0}.prefab", newGuid));
+        //MeshFilter chank = mapGO.gameObject.AddComponent<MeshFilter>();
+        //mapGO.gameObject.AddComponent<Conbiner>();        
     }
 
-    void ProcessMap()
+    IEnumerator ProcessMap()
     {
         List<List<Coord>> wallRegions = GetRegions(1);
 
-        int wallTresholdSize = 200;
+        int wallTresholdSize = 100;
 
+        int blaX = 0;
         foreach (List<Coord> wallRegion in wallRegions)
         {
-            if(wallRegion.Count < wallTresholdSize)
+            if (wallRegion.Count < wallTresholdSize)
             {
+                int blaY = 0;
                 foreach (Coord tile in wallRegion)
                 {
                     map[tile.tileX, tile.tileY] = 0;
+                    
+                   // Debug.Log(string.Format("wallRegion {0}/{1}, tile {2}/{3}",  blaX, wallRegions.Count(), blaY, wallRegion.Count()));
+                    blaY++;
                 }
-            }
+            }blaX++;
         }
+        yield return null;
 
         List<List<Coord>> roomRegions = GetRegions(0);
 
-        int roomTresholdSize = 35;
+        int roomTresholdSize = 55;
         List<Room> notFilteredRooms = new List<Room>(); // notFilteredRooms = rooms wich 'survived' due filtering
-
+        int roomRegionCount = 0;
         foreach (List<Coord> roomRegion in roomRegions)
         {
             if (roomRegion.Count < roomTresholdSize)
             {
+                int tileCount = 0;
                 foreach (Coord tile in roomRegion)
-                {
+                {                    
                     map[tile.tileX, tile.tileY] = 1;
+                    //yield return null;
+                   // Debug.Log(string.Format("roomRegion {0}/{1}, tile {2}/{3}", roomRegionCount, roomRegions.Count(), tileCount, roomRegion.Count()));
+                    tileCount++;
                 }
             }
             else
             {
                 notFilteredRooms.Add(new Room(roomRegion, map));
+                //yield return null;
+                Debug.Log(string.Format("roomRegion {0}/{1}", roomRegionCount, roomRegions.Count()));
             }
+            roomRegionCount++;
         }
-
+        yield return null;
+        Debug.Log(string.Format("Start sorting rooms..."));
         notFilteredRooms.Sort();
+        Debug.Log(string.Format("End sorting rooms..."));
+
         notFilteredRooms[0].isMainRoom = true;
         notFilteredRooms[0].isAccessibleFromMainRoom = true;
-        ConnectClosestRooms(notFilteredRooms);
+        yield return StartCoroutine(ConnectClosestRooms(notFilteredRooms));
+        Debug.Log(string.Format("Connect closest rooms..."));
         navPoints.AddRange(notFilteredRooms.Select(c => c.centerTile).ToList().ToVector());
+
     }
 
-    void ConnectClosestRooms (List<Room> allRooms, bool forceAccessibilityFromMainRoom = false)
+    IEnumerator ConnectClosestRooms (List<Room> allRooms, bool forceAccessibilityFromMainRoom = false)
     {
         List<Room> roomListA = new List<Room>();
         List<Room> roomListB = new List<Room>();
 
         if(forceAccessibilityFromMainRoom)
         {
+            int roomCount = 0;
             foreach (Room room in allRooms)
             {
                 if(room.isAccessibleFromMainRoom)
@@ -136,6 +192,9 @@ public class MapGenerator : MonoBehaviour {
                 {
                     roomListA.Add(room);
                 }
+                
+                Debug.Log(string.Format("room {0}/{1}", roomCount, allRooms.Count()));                
+                roomCount++;
             }
         }
         else
@@ -143,14 +202,14 @@ public class MapGenerator : MonoBehaviour {
             roomListA = allRooms;
             roomListB = allRooms;
         }
-
+        yield return null;
         int bestDistance = 0;
         Coord bestTileA = new Coord();
         Coord bestTileB = new Coord();
         Room bestRoomA = new Room();
         Room bestRoomB = new Room();
         bool possibleConnectionFound = false;
-
+        int roomACount = 0;
         foreach (Room roomA in roomListA)
         {
             if (!forceAccessibilityFromMainRoom)
@@ -189,35 +248,37 @@ public class MapGenerator : MonoBehaviour {
                     }
                 }
             }
+            
 
-            if(possibleConnectionFound && !forceAccessibilityFromMainRoom)
+            if (possibleConnectionFound && !forceAccessibilityFromMainRoom)
             {
-                CreatePassage(bestRoomA, bestRoomB, bestTileA, bestTileB);
+                yield return StartCoroutine(CreatePassage(bestRoomA, bestRoomB, bestTileA, bestTileB));
+                Debug.Log(string.Format("room {0} conected", roomACount));
             }
         }
 
         if (possibleConnectionFound && forceAccessibilityFromMainRoom)
         {
-            CreatePassage(bestRoomA, bestRoomB, bestTileA, bestTileB);
-            ConnectClosestRooms(allRooms, true);
+            yield return StartCoroutine(CreatePassage(bestRoomA, bestRoomB, bestTileA, bestTileB));
+            yield return StartCoroutine(ConnectClosestRooms(allRooms, true));
         }
 
         if (!forceAccessibilityFromMainRoom)
         {
-            ConnectClosestRooms(allRooms, true);
+            yield return StartCoroutine(ConnectClosestRooms(allRooms, true));
         }
-
+        roomACount++;
     }
 
-    void CreatePassage (Room roomA, Room roomB, Coord tileA, Coord tileB)
+    IEnumerator CreatePassage (Room roomA, Room roomB, Coord tileA, Coord tileB)
     {
         Room.ConnectRooms(roomA, roomB);
         List<Coord> line = GetLine(tileA, tileB);
         foreach (Coord c in line)
-        {
-            
-            DrawCircle(c, 2); // the weight of passage way (corridor)
+        {            
+            DrawCircle(c, 2); // the weight of passage way (corridor)           
         }
+        yield return null;
     }
 
     void DrawCircle (Coord c, int r)
@@ -361,7 +422,7 @@ public class MapGenerator : MonoBehaviour {
         return x >= 0 && x < width && y >= 0 && y < height;
     }
 
-    void RandomFillMap()
+    IEnumerator RandomFillMap()
     {
         if (useRandomSeed)
         {
@@ -382,12 +443,12 @@ public class MapGenerator : MonoBehaviour {
                 {
                     map[x, y] = (psRandom.Next(0, 100) < randomFillPercent) ? 1 : 0; //if less than randomFillPercent than in this tile = 1, else = 0
                 }
-
             }
         }
+        yield return null;
     }
 
-    void SmoothMap()
+    IEnumerator SmoothMap()
     {
         for (int x = 0; x < width; x++)
         {
@@ -405,6 +466,7 @@ public class MapGenerator : MonoBehaviour {
                 }
             }
         }
+        yield return null;
     }
 
     int GetSurroundingWallCount(int gridX, int gridY)
@@ -537,6 +599,28 @@ public class MapGenerator : MonoBehaviour {
             return otherRoom.roomSize.CompareTo(roomSize);
         }
     }
+
+}
+
+public class CoroutineWithData
+{ 
+    public Coroutine coroutine { get; private set; }
+    public object result;
+    private IEnumerator target;
+    public CoroutineWithData(MonoBehaviour owner, IEnumerator target)
+    {
+        this.target = target;
+        this.coroutine = owner.StartCoroutine(Run());
+    }
+
+    private IEnumerator Run()
+    {
+        while (target.MoveNext())
+        {
+            result = target.Current;
+            yield return result;
+        }
+    }
 }
 public static class LinqHelper
 {
@@ -553,5 +637,35 @@ public static class LinqHelper
     {
         var sorted = points.OrderBy(v2 => Vector2.Distance(v1,v2));
         return sorted.First();
+    }
+    public static List<List<T[,]>> ToSquare2D<T>(this T[,] array, int size)
+    {
+        var blaX = ((int)array.GetLength(0) / size);
+        var blaY = ((int)array.GetLength(1) / size);
+        var sizeX=  array.GetLength(0);
+        var sizeY = array.GetLength(1);
+        var returned = new List<List<T[,]>>(blaX);
+        for (var kx = 0; kx < sizeX; kx += size)
+        {
+            var inner = new List<T[,]>(blaY);
+            for (var ky = 0; ky < sizeY; ky += size)
+            {
+                var buffer = new T[size+2, size+2];
+                int bufX = 1;
+                for (var i = kx; i < kx + size; i++)
+                {
+                    int bufY = 1;
+                    for (var j = ky; j < ky + size; j++)
+                    {                        
+                        buffer[bufX, bufY] = array[i, j];
+                        bufY++;                        
+                    }
+                    bufX++;
+                }
+                inner.Add(buffer);
+            }
+            returned.Add(inner);
+        }
+        return returned;
     }
 }
