@@ -19,7 +19,11 @@ public class MeshGenerator : MonoBehaviour {
     List<List<int>> outlines = new List<List<int>>();
     HashSet<int> checkedVertices = new HashSet<int>();
 
+<<<<<<< HEAD
     public IEnumerator<GameObject> GenerateMesh (int[,] map, float squareSize, int indexX, int indexY)
+=======
+    public void GenerateMesh(int[,] map, float squareSize, List<Vector2> roomCenters )
+>>>>>>> origin/DevValuta
     {
         var chankGO = new GameObject(indexX.ToString() + indexY.ToString());
         var topGO = new GameObject("top" + indexX.ToString()+ indexY.ToString());
@@ -91,10 +95,31 @@ public class MeshGenerator : MonoBehaviour {
         
         top.mesh = gmcave;
         walls.mesh = gmwals;
+<<<<<<< HEAD
         AssetDatabase.SaveAssets();
 
         //var emptyPrefab = PrefabUtility.CreateEmptyPrefab(string.Format("Assets/1/GO{0}.prefab", newGuid));
         yield return chankGO;
+=======
+        var wallPoints = new List<Vector2>();
+        //var emptyPrefab = PrefabUtility.CreateEmptyPrefab(string.Format("Assets/1/GO{0}.prefab", newGuid));
+        for(int i= 0; i < map.GetLength(0); i++)
+        {
+            for (int j = 0; j < map.GetLength(1); j++)
+            {
+                if(map[i,j] == 1)
+                {
+                    wallPoints.Add(new Vector2(i, j));
+                }
+            }
+        }
+        var newMap = gm.AddComponent<Map>() as Map;
+        newMap.RoomCenters = roomCenters;
+        newMap.RoomBorders = wallPoints;
+
+        PrefabUtility.CreatePrefab(string.Format("Assets/1/GO{0}.prefab", newGuid), gm);
+        
+>>>>>>> origin/DevValuta
 
         //PrefabUtility.ReplacePrefab(gm, emptyPrefab);
     } 
@@ -440,7 +465,7 @@ public class MeshGenerator : MonoBehaviour {
         public SquareGrid(int[,] map, float squareSize)
         {
             int nodeCountX = map.GetLength(0);
-            int nodeCountY = map.GetLength(1);
+            int nodeCountY = map.GetLength(1); 
             float mapWidth = nodeCountX * squareSize;
             float mapHeight = nodeCountY * squareSize;
 
