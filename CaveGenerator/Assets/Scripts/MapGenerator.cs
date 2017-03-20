@@ -88,7 +88,7 @@ public class MapGenerator : MonoBehaviour {
         Debug.Log(string.Format("End bordering map..."));
         var newGuid = Guid.NewGuid().ToString();
         MeshGenerator meshGen = GetComponent<MeshGenerator>();
-<<<<<<< HEAD
+//<<<<<<< HEAD
         var list = borderedMap.ToSquare2D(chankSizeX);
         int indexX = 0;
         var mapGO = Instantiate(new GameObject("map" + newGuid),new Vector3(0,10,0),new Quaternion()) as GameObject;
@@ -111,10 +111,10 @@ public class MapGenerator : MonoBehaviour {
         AssetDatabase.CreateAsset(mapGO, string.Format("Assets/maps/map{0}.prefab", newGuid));
         //MeshFilter chank = mapGO.gameObject.AddComponent<MeshFilter>();
         //mapGO.gameObject.AddComponent<Conbiner>();        
-=======
-        meshGen.GenerateMesh(borderedMap, 1, navPoints);
+//=======
+        //meshGen.GenerateMesh(borderedMap, 1, navPoints);
 
->>>>>>> origin/DevValuta
+//>>>>>>> origin/DevValuta
     }
 
     IEnumerator ProcessMap()
