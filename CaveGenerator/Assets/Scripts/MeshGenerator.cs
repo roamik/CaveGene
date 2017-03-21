@@ -20,7 +20,7 @@ public class MeshGenerator : MonoBehaviour {
     HashSet<int> checkedVertices = new HashSet<int>();
 
 //<<<<<<< HEAD
-   public IEnumerator<GameObject> GenerateMesh (int[,] map, float squareSize, int indexX, int indexY)
+   public IEnumerator<GameObject> GenerateMesh (int[,] map, float[,] heigtmap, float squareSize, int indexX, int indexY)
 ////=======
 //    public void GenerateMesh(int[,] map, float squareSize, List<Vector2> roomCenters )
 //>>>>>>> origin/DevValuta
@@ -45,7 +45,7 @@ public class MeshGenerator : MonoBehaviour {
         outlines.Clear();
         checkedVertices.Clear();
 
-        squareGrid = new SquareGrid(map, squareSize);
+        squareGrid = new SquareGrid(map, heigtmap, squareSize);
 
         vertices = new List<Vector3>();
         triangles = new List<int>();
@@ -84,6 +84,10 @@ public class MeshGenerator : MonoBehaviour {
         walls.mesh = wallMesh;
         MeshCollider wallCollider = walls.gameObject.AddComponent<MeshCollider>();
         wallCollider.sharedMesh = wallMesh;
+
+        MeshCollider wallCollidertop = top.gameObject.AddComponent<MeshCollider>();
+        wallCollidertop.sharedMesh = mesh;
+
 
         AssetDatabase.CreateAsset(wallMesh, string.Format("Assets/1/wals{0}.prefab", newGuid));
         AssetDatabase.CreateAsset(mesh, string.Format("Assets/1/cave{0}.prefab", newGuid));
@@ -134,7 +138,7 @@ public class MeshGenerator : MonoBehaviour {
         var veclist = new List<Vector3>()
                 {
                     new Vector3(size/4, size/4),
-                    //new Vector3((size/4)*3 , size/4),
+                    new Vector3((size/4)*3 , size/4),
                     new Vector3(size/4,(size/4)*3),
                     new Vector3((size/4)*3 , (size/4)*3),
                 };
@@ -462,7 +466,7 @@ public class MeshGenerator : MonoBehaviour {
     {
         public Square[,] squares;
 
-        public SquareGrid(int[,] map, float squareSize)
+        public SquareGrid(int[,] map, float[,] height, float squareSize)
         {
             int nodeCountX = map.GetLength(0);
             int nodeCountY = map.GetLength(1); 
@@ -475,7 +479,7 @@ public class MeshGenerator : MonoBehaviour {
             {
                 for(int y = 0; y <nodeCountY; y++)
                 {
-                    Vector3 pos = new Vector3(-mapWidth / 2 + x * squareSize + squareSize / 2, 0, -mapHeight / 2 + y * squareSize + squareSize / 2);
+                    Vector3 pos = new Vector3(-mapWidth / 2 + x * squareSize + squareSize / 2, height[x,y], -mapHeight / 2 + y * squareSize + squareSize / 2);
                     controlNodes[x, y] = new ControlNode(pos, map[x, y] == 1, squareSize);
                 }
             }

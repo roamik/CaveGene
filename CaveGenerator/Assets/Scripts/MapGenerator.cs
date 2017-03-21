@@ -24,12 +24,19 @@ public class MapGenerator : MonoBehaviour {
     public List<Vector2> navPoints;
 
     int[,] map;
-    public List<GameObject> Chanks;
+    public List<GameObject> Chanks; Texture2D hMap;
+
+    
+ 
+ //Bottom left section of the map, other sections are similar
+ 
+         //Add each new vertex in the plane
+   //hMap.GetPixel(i, j).grayscale;
     
     void Start()
     {
         Chanks = new List<GameObject>();
-       
+        hMap = AssetDatabase.LoadAssetAtPath<Texture2D>(string.Format("Assets/Materials/Heightmap.jpg"));
     }
 
     void Update()
@@ -88,16 +95,18 @@ public class MapGenerator : MonoBehaviour {
         Debug.Log(string.Format("End bordering map..."));
         var newGuid = Guid.NewGuid().ToString();
         MeshGenerator meshGen = GetComponent<MeshGenerator>();
-//<<<<<<< HEAD
+
         var list = borderedMap.ToSquare2D(chankSizeX);
+        hMap.Resize(borderedMap.GetLength(0), borderedMap.GetLength(1));
+        var listheights = hMap.ToSquare2D(chankSizeX,150);
         int indexX = 0;
         var mapGO = Instantiate(new GameObject("map" + newGuid),new Vector3(0,10,0),new Quaternion()) as GameObject;
         foreach (var inserList in list)
         {
             int indexY = 0;
             foreach (var l in inserList)
-            {
-                var cd = new CoroutineWithData(this, meshGen.GenerateMesh(l, 1, indexX, indexY));
+            {                
+                var cd = new CoroutineWithData(this, meshGen.GenerateMesh(l, listheights[list.IndexOf(inserList)][inserList.IndexOf(l)] , 1, indexX, indexY));
                 yield return cd.coroutine;
                 var gm = cd.result as GameObject;
                 gm.transform.parent = mapGO.transform;
@@ -107,14 +116,8 @@ public class MapGenerator : MonoBehaviour {
             }
             indexX++;
         }
-        //PrefabUtility.CreatePrefab(string.Format("Assets/1/GO{0}.prefab", newGuid), mapGO);
+        
         AssetDatabase.CreateAsset(mapGO, string.Format("Assets/maps/map{0}.prefab", newGuid));
-        //MeshFilter chank = mapGO.gameObject.AddComponent<MeshFilter>();
-        //mapGO.gameObject.AddComponent<Conbiner>();        
-//=======
-        //meshGen.GenerateMesh(borderedMap, 1, navPoints);
-
-//>>>>>>> origin/DevValuta
     }
 
     IEnumerator ProcessMap()
@@ -664,6 +667,67 @@ public static class LinqHelper
                     {                        
                         buffer[bufX, bufY] = array[i, j];
                         bufY++;                        
+                    }
+                    bufX++;
+                }
+                inner.Add(buffer);
+            }
+            returned.Add(inner);
+        }
+        return returned;
+    }
+    public static List<List<float[,]>> ToSquare2D(this Texture2D array, int size, int heigth)
+    {
+        var blaX = ((int)array.height / size);
+        var blaY = ((int)array.width / size);
+        var sizeX = array.height;
+        var sizeY = array.width;
+        var returned = new List<List<float[,]>>(blaX);
+        for (var kx = 0; kx < sizeX; kx += size)
+        {
+            var inner = new List<float[,]>(blaY);
+            for (var ky = 0; ky < sizeY; ky += size)
+            {
+                var buffer = new float[size + 2, size + 2];
+                int bufX = 1;
+                for (var i = kx; i < kx + size; i++)
+                {
+                    int bufY = 1;
+                    for (var j = ky; j < ky + size; j++)
+                    {
+                        if (i > 0 && j > 0 && i < sizeX && j < sizeY)
+                        {
+                            buffer[bufX, bufY] = array.GetPixel(i, j).grayscale * heigth;
+                        }
+                        //else
+                        //{
+                        //    if (i < 0 && j < 0)
+                        //    {
+                        //        buffer[bufX, bufY] =( array.GetPixel(i+1, j+1).grayscale +1) * heigth;
+                        //    }
+                        //    else if (i < 0 && j < sizeY)
+                        //    {
+                        //        buffer[bufX, bufY] =( array.GetPixel(i+1, j).grayscale + 1 )* heigth;
+                        //    }
+                        //    else if (j < 0 && i < sizeX)
+                        //    {
+                        //        buffer[bufX, bufY] = (array.GetPixel(i, j + 1).grayscale + 1) * heigth;
+                        //    }
+                        //    if (i > sizeX && j > sizeY)
+                        //    {
+                        //        buffer[bufX, bufY] = (array.GetPixel(i - 1, j - 1).grayscale + 1 )* heigth;
+                        //    }
+                        //    else if (i > sizeY && j >= 0)
+                        //    {
+                        //        buffer[bufX, bufY] =( array.GetPixel(i-1, j).grayscale + 1) * heigth;
+                        //    }
+                        //    else if (j > sizeX && i >= 0)
+                        //    {
+                        //        buffer[bufX, bufY] = (array.GetPixel(i, j-1).grayscale + 1) * heigth;
+                        //    }
+                        //}
+                        
+                        bufY++;
                     }
                     bufX++;
                 }
