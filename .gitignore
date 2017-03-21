@@ -28,3 +28,11 @@ sysinfo.txt
 # Builds
 *.apk
 *.unitypackage
+*.prefab
+*.meta
+*.dwlt
+CaveGenerator/Library/InspectorExpandedItems.asset
+*.dwlt
+CaveGenerator/Library/metadata/02/029f0a98fd7b5a941a4fd09e028a7ff4.info
+*.info
+CaveGenerator/Library/metadata/06/068677862debc7c429880fbe0064b08a
