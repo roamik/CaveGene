@@ -8,7 +8,7 @@ public class PlayerContoller : MonoBehaviour
     public float walkSpeed= 2;
     public float runSpeed = 6;
     public float gravity = -12;
-    public float jumpHeight = 2;
+    public float jumpHeight = 1;
     [Range(0,2)]
     public float airControllPercent;
 
@@ -44,7 +44,6 @@ public class PlayerContoller : MonoBehaviour
         {
             Jump();
         }
-
 
         float animationSpeedPercent = ((running) ? currentSpeed / runSpeed : currentSpeed / walkSpeed * 0.5f);
         animator.SetFloat("Speed", animationSpeedPercent, speedSmoothTime, Time.deltaTime);
@@ -83,6 +82,7 @@ public class PlayerContoller : MonoBehaviour
         {
             float jumpVelocity = Mathf.Sqrt(-2 * gravity * jumpHeight);
             velocityY = jumpVelocity;
+            animator.SetTrigger("isJumping");
         }
     }
 
