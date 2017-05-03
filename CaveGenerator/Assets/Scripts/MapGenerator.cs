@@ -106,7 +106,7 @@ public class MapGenerator : MonoBehaviour {
             int indexY = 0;
             foreach (var l in inserList)
             {                
-                var cd = new CoroutineWithData(this, meshGen.GenerateMesh(l, listheights[list.IndexOf(inserList)][inserList.IndexOf(l)] , 1, indexX, indexY));
+                var cd = new CoroutineWithData(this, meshGen.GenerateMesh(l, 1, indexX, indexY));
                 yield return cd.coroutine;
                 var gm = cd.result as GameObject;
                 gm.transform.parent = mapGO.transform;
@@ -116,8 +116,8 @@ public class MapGenerator : MonoBehaviour {
             }
             indexX++;
         }
-        
-        AssetDatabase.CreateAsset(mapGO, string.Format("Assets/maps/map{0}.prefab", newGuid));
+        PrefabUtility.CreatePrefab(string.Format("Assets/1/maps/map{0}.prefab", newGuid), mapGO);
+        //AssetDatabase.CreateAsset(mapGO, );
     }
 
     IEnumerator ProcessMap()
