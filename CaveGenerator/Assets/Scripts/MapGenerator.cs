@@ -7,14 +7,17 @@ using System.Collections;
 
 public class MapGenerator : MonoBehaviour {
 
-    public int width = 64;
-    public int height = 64;
+    public static int width = 64;
+    public static int height = 64;
 
-    public int chankSizeX = 8;
-    public int chankSizeY = 8;
+    public static int chankSizeX = 8;
+    public static int chankSizeY = 8;
 
+    public int mpWidth;
+    public int mpHeight;
+    public int mpChankX;
+    public int mpChankY;
 
-    
     public string seed;
     public bool useRandomSeed;
 
@@ -35,6 +38,10 @@ public class MapGenerator : MonoBehaviour {
     
     void Start()
     {
+        mpWidth = width;
+        mpHeight = height;
+        mpChankX = chankSizeX;
+        mpChankY = chankSizeY;
         Chanks = new List<GameObject>();
         hMap = AssetDatabase.LoadAssetAtPath<Texture2D>(string.Format("Assets/Materials/Heightmap.jpg"));
     }
